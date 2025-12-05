@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { extractFromPFX, readFileAsArrayBuffer } from '../utils/cryptoUtils';
+import { extractFromPFX, extractFromP7B, readFileAsArrayBuffer } from '../utils/cryptoUtils';
 import { ParsedPFX } from '../types';
 import { Button } from './ui/Button';
 import { TextArea } from './ui/TextArea';
@@ -21,21 +21,49 @@ export const PFXExtractor: React.FC = () => {
     }
   };
 
+  const isP7B = (filename: string) => {
+      const lower = filename.toLowerCase();
+      return lower.endsWith('.p7b') || lower.endsWith('.p7c');
+  }
+
   const handleConvert = async () => {
+    setError(null);
+
     if (!file) {
-      setError("Please select a PFX file first.");
+      setError("Please select a file first.");
+      return;
+    }
+
+    const fileName = file.name.toLowerCase();
+    const isP7bFile = isP7B(fileName);
+
+    // Validation
+    if (!fileName.endsWith('.pfx') && !fileName.endsWith('.p12') && !isP7bFile) {
+      setError("Invalid file type. Supported formats: .pfx, .p12, .p7b, .p7c");
+      return;
+    }
+
+    // Password validation only for PFX
+    if (!isP7bFile && !password) {
+      setError("Please enter the PFX password.");
       return;
     }
 
     setIsProcessing(true);
-    setError(null);
 
     try {
       // Small delay to allow UI to update
       await new Promise(resolve => setTimeout(resolve, 100));
       
       const buffer = await readFileAsArrayBuffer(file);
-      const extracted = extractFromPFX(buffer, password, outputPassword || undefined);
+      
+      let extracted: ParsedPFX;
+      if (isP7bFile) {
+          extracted = extractFromP7B(buffer);
+      } else {
+          extracted = extractFromPFX(buffer, password, outputPassword || undefined);
+      }
+      
       setResult(extracted);
     } catch (err: any) {
       setError(err.message || "An unknown error occurred during conversion.");
@@ -61,7 +89,7 @@ export const PFXExtractor: React.FC = () => {
       <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
         <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
           <Upload className="w-5 h-5 text-blue-400" />
-          Import PFX/P12 File
+          Import PFX/P12 or P7B File
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -70,7 +98,7 @@ export const PFXExtractor: React.FC = () => {
               <label className="block text-sm font-medium text-slate-400 mb-1">Select File</label>
               <input 
                 type="file" 
-                accept=".pfx,.p12"
+                accept=".pfx,.p12,.p7b,.p7c"
                 onChange={handleFileChange}
                 className="block w-full text-sm text-slate-400
                   file:mr-4 file:py-2 file:px-4
@@ -81,18 +109,23 @@ export const PFXExtractor: React.FC = () => {
                   cursor-pointer bg-slate-800 rounded-lg border border-slate-700
                 "
               />
+              <p className="text-xs text-slate-500 mt-1 pl-1">Supported: .pfx, .p12, .p7b, .p7c</p>
             </div>
             
-            <div>
+            <div className={`transition-opacity duration-200 ${file && isP7B(file.name) ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
               <label className="block text-sm font-medium text-slate-400 mb-1">PFX Password (Input)</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
                 <input
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password to unlock PFX"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error === "Please enter the PFX password.") setError(null);
+                  }}
+                  placeholder={file && isP7B(file.name) ? "Not required for P7B" : "Enter password to unlock PFX"}
+                  disabled={!!(file && isP7B(file.name))}
+                  className={`w-full bg-slate-800 border rounded-lg pl-9 pr-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none ${error === "Please enter the PFX password." ? 'border-red-500' : 'border-slate-700'}`}
                 />
               </div>
             </div>
@@ -106,7 +139,8 @@ export const PFXExtractor: React.FC = () => {
                   value={outputPassword}
                   onChange={(e) => setOutputPassword(e.target.value)}
                   placeholder="Optional: Encrypt the .key file"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-slate-600"
+                  disabled={!!(file && isP7B(file.name))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-slate-600 disabled:opacity-50"
                 />
               </div>
               <p className="text-xs text-slate-500 mt-1">Leave blank for unencrypted key.</p>
@@ -122,8 +156,8 @@ export const PFXExtractor: React.FC = () => {
             </Button>
 
             {error && (
-              <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-200 text-sm flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
+              <div className="p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-200 text-sm flex items-center gap-2 animate-fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
               </div>
             )}
@@ -141,29 +175,36 @@ export const PFXExtractor: React.FC = () => {
 
       {result && (
         <div className="grid grid-cols-1 gap-6 animate-fade-in-up">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-white flex items-center gap-2">
-                Private Key (.key) 
-                {outputPassword && <span className="text-xs bg-green-900/50 text-green-400 px-2 py-0.5 rounded border border-green-800">Encrypted</span>}
-              </h3>
-              <Button 
-                variant="secondary" 
-                size="sm"
-                onClick={() => result.key && downloadText('private.key', result.key)}
-                disabled={!result.key}
-                className="text-xs"
-              >
-                <Download className="w-4 h-4" /> Download
-              </Button>
+            {/* Private Key Section - Only show if present (not for P7B) */}
+           {result.key ? (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                <h3 className="text-lg font-medium text-white flex items-center gap-2">
+                    Private Key (.key) 
+                    {outputPassword && <span className="text-xs bg-green-900/50 text-green-400 px-2 py-0.5 rounded border border-green-800">Encrypted</span>}
+                </h3>
+                <Button 
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => result.key && downloadText('private.key', result.key)}
+                    disabled={!result.key}
+                    className="text-xs"
+                >
+                    <Download className="w-4 h-4" /> Download
+                </Button>
+                </div>
+                <TextArea 
+                label="" 
+                readOnly 
+                rows={6} 
+                value={result.key || ""} 
+                />
             </div>
-            <TextArea 
-              label="" 
-              readOnly 
-              rows={6} 
-              value={result.key || "No private key found."} 
-            />
-          </div>
+           ) : (
+             <div className="p-3 bg-blue-900/20 border border-blue-800 rounded-lg text-blue-200 text-sm">
+                 No Private Key found (Normal for P7B files).
+             </div>
+           )}
 
           <div className="space-y-2">
             <div className="flex justify-between items-center">

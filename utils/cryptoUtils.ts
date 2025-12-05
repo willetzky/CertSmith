@@ -57,8 +57,6 @@ export const extractFromPFX = (
     const caPems: string[] = [];
 
     // Iterate through safe bags to find keys and certificates
-    // p12.safeContent is an array of SafeContent structures
-    // Each SafeContent contains an array of SafeBags
     for (const safeContent of p12.safeContents) {
       for (const safeBag of safeContent.safeBags) {
         // If it's a key bag (PKCS#8 shrouded or simple key)
@@ -80,12 +78,6 @@ export const extractFromPFX = (
         else if (safeBag.type === forge.pki.oids.certBag) {
           if (safeBag.cert) {
             const pem = forge.pki.certificateToPem(safeBag.cert);
-            
-            // Heuristic to distinguish Leaf Cert from CA:
-            // This is basic; in reality, we should build a chain. 
-            // Here we assume the first one found or one with a matching localKeyId is the leaf, others are CA.
-            // For simplicity in this demo: First cert is treated as Main, subsequent as CAs unless we can match localKeyId.
-            // A better way is to check if it has a matching private key, but the key might be in a different bag.
             
             if (!certPem) {
                 certPem = pem;
@@ -111,13 +103,52 @@ export const extractFromPFX = (
 };
 
 /**
+ * Extracts Certificates from a P7B/PKCS#7 file buffer
+ */
+export const extractFromP7B = (p7bBuffer: ArrayBuffer): ParsedPFX => {
+  const buffer = forge.util.createBuffer(p7bBuffer);
+  let p7;
+
+  // Try DER first (binary P7B)
+  try {
+      const asn1 = forge.asn1.fromDer(buffer);
+      p7 = forge.pkcs7.messageFromAsn1(asn1);
+  } catch (e) {
+      // Try PEM (text P7B)
+      try {
+           const pemStr = buffer.toString();
+           p7 = forge.pkcs7.messageFromPem(pemStr);
+      } catch (e2) {
+           throw new Error("Failed to parse P7B. Ensure it is a valid PKCS#7 file (DER or PEM).");
+      }
+  }
+
+  // forge types for pkcs7 might be incomplete, casting to any to access certificates safely
+  const certs = (p7 as any).certificates || [];
+  
+  if (!certs || certs.length === 0) {
+      throw new Error("No certificates found in P7B file.");
+  }
+
+  const pemCerts = certs.map((c: any) => forge.pki.certificateToPem(c));
+  
+  // Return structure matching PFX, but with no private key
+  return {
+      key: null,
+      cert: pemCerts[0] || null,
+      ca: pemCerts.length > 1 ? pemCerts.slice(1).join('\n') : null
+  };
+};
+
+/**
  * Creates a PFX/P12 file from PEM encoded components
  */
 export const createPFX = (
   keyPem: string,
   certPem: string,
   caPem: string | null,
-  password: string
+  password: string,
+  friendlyName?: string
 ): string => {
   try {
     // Parse Private Key
@@ -131,8 +162,6 @@ export const createPFX = (
     chain.push(cert);
 
     if (caPem) {
-        // Split concatenation if multiple CAs
-        // Simple split by END CERTIFICATE
         const caBlocks = caPem.split('-----END CERTIFICATE-----');
         for (const block of caBlocks) {
             const trimmed = block.trim();
@@ -153,18 +182,45 @@ export const createPFX = (
         chain,
         password,
         {
-            algorithm: '3des', // Triple DES is standard for max compatibility, though AES is newer
+            algorithm: '3des', 
             generateLocalKeyId: true,
-            friendlyName: 'CertSmith Export'
+            friendlyName: friendlyName || 'CertSmith Export'
         }
     );
 
     const p12Der = forge.asn1.toDer(p12Asn1).getBytes();
-    // Return binary string (React will handle download as blob)
     return p12Der;
     
   } catch (error) {
     throw new Error("Failed to generate PFX. Ensure your Private Key and Certificate match and are valid PEM format.");
+  }
+};
+
+/**
+ * Creates a P7B/PKCS#7 file from PEM encoded components (No Private Key)
+ */
+export const createP7B = (certPem: string, caPem: string | null): string => {
+  try {
+      const cert = forge.pki.certificateFromPem(certPem);
+      const p7 = forge.pkcs7.createSignedData();
+      p7.addCertificate(cert);
+      
+      if (caPem) {
+           const caBlocks = caPem.split('-----END CERTIFICATE-----');
+           for (const block of caBlocks) {
+               const trimmed = block.trim();
+               if (trimmed) {
+                   try {
+                      const caCert = forge.pki.certificateFromPem(trimmed + '\n-----END CERTIFICATE-----');
+                      p7.addCertificate(caCert);
+                   } catch(e) {}
+               }
+           }
+      }
+      
+      return forge.pkcs7.messageToPem(p7);
+  } catch (e) {
+      throw new Error("Failed to create P7B: " + (e instanceof Error ? e.message : String(e)));
   }
 };
 
