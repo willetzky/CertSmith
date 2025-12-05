@@ -117,6 +117,14 @@ export const PFXExtractor: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const getBaseFileName = () => {
+      if (!file) return 'certificate';
+      // Remove extension case insensitive
+      return file.name.replace(/\.(pfx|p12|p7b|p7c)$/i, '');
+  };
+
+  const baseFileName = getBaseFileName();
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="bg-slate-800/50 p-6 rounded-xl border border-slate-700">
@@ -254,7 +262,7 @@ export const PFXExtractor: React.FC = () => {
                 <Button 
                     variant="secondary" 
                     size="sm"
-                    onClick={() => result.key && downloadText('private.key', result.key)}
+                    onClick={() => result.key && downloadText(`${baseFileName}.key`, result.key)}
                     disabled={!result.key}
                     className="text-xs"
                 >
@@ -280,7 +288,7 @@ export const PFXExtractor: React.FC = () => {
               <Button 
                 variant="secondary" 
                 size="sm"
-                onClick={() => result.cert && downloadText('certificate.crt', result.cert)}
+                onClick={() => result.cert && downloadText(`${baseFileName}.crt`, result.cert)}
                 disabled={!result.cert}
                 className="text-xs"
               >
@@ -298,11 +306,11 @@ export const PFXExtractor: React.FC = () => {
           {result.ca && (
              <div className="space-y-2">
              <div className="flex justify-between items-center">
-               <h3 className="text-lg font-medium text-white">CA Bundle (.ca-bundle)</h3>
+               <h3 className="text-lg font-medium text-white">CA Bundle (.ca.crt)</h3>
                <Button 
                  variant="secondary" 
                  size="sm"
-                 onClick={() => result.ca && downloadText('ca-bundle.crt', result.ca)}
+                 onClick={() => result.ca && downloadText(`${baseFileName}.ca.crt`, result.ca)}
                  disabled={!result.ca}
                  className="text-xs"
                >
