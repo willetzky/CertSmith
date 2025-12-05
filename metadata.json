@@ -1,0 +1,5 @@
+{
+  "name": "CertSmith",
+  "description": "A secure, client-side SSL/TLS certificate tool. Convert PFX to PEM/CRT/Key and vice versa. Includes AI-powered certificate analysis using Gemini.",
+  "requestFramePermissions": []
+}
