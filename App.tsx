@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { PFXExtractor } from './components/PFXExtractor';
 import { PFXGenerator } from './components/PFXGenerator';
+import { MatchChecker } from './components/MatchChecker';
 import { CertificateAnalyzer } from './components/CertificateAnalyzer';
 import { AppMode } from './types';
-import { ShieldCheck, FileInput, FileOutput, BrainCircuit } from 'lucide-react';
+import { ShieldCheck, FileInput, FileOutput, BrainCircuit, ShieldQuestion } from 'lucide-react';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(AppMode.PFX_TO_PEM);
@@ -27,10 +29,10 @@ const App: React.FC = () => {
               </div>
             </div>
             
-            <div className="hidden md:flex items-center space-x-4 text-sm text-slate-500">
-                <span>Runs on React + Node-Forge</span>
-                <span className="w-1 h-1 bg-slate-700 rounded-full"></span>
-                <span>Ubuntu 24.04 Ready</span>
+            <div className="flex items-center gap-4">
+                <div className="hidden md:flex items-center space-x-4 text-sm text-slate-500">
+                    <span>Ubuntu 24.04 Ready</span>
+                </div>
             </div>
           </div>
         </div>
@@ -50,7 +52,7 @@ const App: React.FC = () => {
             }`}
           >
             <FileInput className="w-4 h-4" />
-            Extract PFX
+            Extract PFX/P7B
           </button>
           
           <button
@@ -62,7 +64,19 @@ const App: React.FC = () => {
             }`}
           >
             <FileOutput className="w-4 h-4" />
-            Create PFX
+            Create PFX/P7B
+          </button>
+
+          <button
+            onClick={() => setMode(AppMode.MATCH_CHECKER)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+              mode === AppMode.MATCH_CHECKER 
+                ? 'bg-orange-600 text-white shadow-lg shadow-orange-900/20' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            <ShieldQuestion className="w-4 h-4" />
+            Match Checker
           </button>
 
           <button
@@ -82,6 +96,7 @@ const App: React.FC = () => {
         <div className="min-h-[500px]">
           {mode === AppMode.PFX_TO_PEM && <PFXExtractor />}
           {mode === AppMode.PEM_TO_PFX && <PFXGenerator />}
+          {mode === AppMode.MATCH_CHECKER && <MatchChecker />}
           {mode === AppMode.AI_ANALYSIS && <CertificateAnalyzer />}
         </div>
 
@@ -90,6 +105,10 @@ const App: React.FC = () => {
       <footer className="border-t border-slate-800 mt-12 py-8 bg-slate-950">
           <div className="max-w-7xl mx-auto px-4 text-center text-slate-600 text-sm">
               <p>&copy; {new Date().getFullYear()} CertSmith. All cryptographic operations performed locally in your browser.</p>
+              <div className="mt-2 flex justify-center gap-4">
+                  <a href="#" className="hover:text-blue-400">Documentation</a>
+                  <a href="#" className="hover:text-blue-400">Privacy Policy</a>
+              </div>
           </div>
       </footer>
     </div>

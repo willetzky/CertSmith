@@ -1,3 +1,4 @@
+
 import forge from 'node-forge';
 import { ParsedPFX } from '../types';
 
@@ -138,6 +139,44 @@ export const extractFromP7B = (p7bBuffer: ArrayBuffer): ParsedPFX => {
       cert: pemCerts[0] || null,
       ca: pemCerts.length > 1 ? pemCerts.slice(1).join('\n') : null
   };
+};
+
+/**
+ * Verifies if a certificate PEM matches a private key PEM
+ */
+export const verifyCertKeyMatch = (certPem: string, keyPem: string, password?: string): boolean => {
+  try {
+    const cert = forge.pki.certificateFromPem(certPem);
+    let privateKey: any;
+
+    try {
+      // Try unencrypted first
+      privateKey = forge.pki.privateKeyFromPem(keyPem);
+    } catch (e) {
+      // Try encrypted if password provided
+      if (password) {
+        privateKey = forge.pki.decryptRsaPrivateKey(keyPem, password);
+      } else {
+        throw new Error("Private key is encrypted. Please provide a password.");
+      }
+    }
+
+    if (!privateKey) throw new Error("Could not parse private key.");
+
+    // Compare public keys
+    // For RSA, compare modulus and exponent
+    const certPubKey = cert.publicKey as any;
+    
+    // Derived public key from private key
+    const derivedPubKey = forge.pki.setRsaPublicKey(privateKey.n, privateKey.e);
+
+    const certPubKeyPem = forge.pki.publicKeyToPem(certPubKey);
+    const derivedPubKeyPem = forge.pki.publicKeyToPem(derivedPubKey);
+
+    return certPubKeyPem === derivedPubKeyPem;
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to verify match.");
+  }
 };
 
 /**

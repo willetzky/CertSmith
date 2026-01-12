@@ -1,6 +1,8 @@
+
 export enum AppMode {
   PFX_TO_PEM = 'PFX_TO_PEM',
   PEM_TO_PFX = 'PEM_TO_PFX',
+  MATCH_CHECKER = 'MATCH_CHECKER',
   AI_ANALYSIS = 'AI_ANALYSIS'
 }
 

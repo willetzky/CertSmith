@@ -1,5 +1,9 @@
+
 import { GoogleGenAI } from "@google/genai";
 
+/**
+ * Initializes the Gemini client using the environment's API key.
+ */
 const getGeminiClient = () => {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
@@ -8,6 +12,10 @@ const getGeminiClient = () => {
     return new GoogleGenAI({ apiKey });
 };
 
+/**
+ * Analyzes an SSL/TLS certificate using Gemini AI.
+ * Uses gemini-3-pro-preview for advanced reasoning on cybersecurity data.
+ */
 export const analyzeCertificate = async (certPem: string): Promise<string> => {
     try {
         const client = getGeminiClient();
@@ -27,11 +35,13 @@ export const analyzeCertificate = async (certPem: string): Promise<string> => {
         ${certPem}
         `;
 
+        // Using gemini-3-pro-preview for complex analysis task
         const response = await client.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3-pro-preview',
             contents: prompt,
         });
 
+        // Access the .text property directly (not a method)
         return response.text || "No analysis could be generated.";
 
     } catch (error) {
