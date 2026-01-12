@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    host: true
+    host: true, // Allows access from other devices on the same network
+  },
+  build: {
+    target: 'esnext'
   }
 });
