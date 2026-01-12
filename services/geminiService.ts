@@ -1,15 +1,16 @@
-
 import { GoogleGenAI } from "@google/genai";
 
 /**
- * Initializes the Gemini client using the environment's API key.
+ * Safely retrieves the API Key from the environment.
  */
-const getGeminiClient = () => {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-        throw new Error("API Key not found in environment variables.");
+const getApiKey = () => {
+    try {
+        // Use globalThis to safely check for process in various environments
+        const env = (globalThis as any).process?.env;
+        return env?.API_KEY || null;
+    } catch (e) {
+        return null;
     }
-    return new GoogleGenAI({ apiKey });
 };
 
 /**
@@ -17,8 +18,14 @@ const getGeminiClient = () => {
  * Uses gemini-3-pro-preview for advanced reasoning on cybersecurity data.
  */
 export const analyzeCertificate = async (certPem: string): Promise<string> => {
+    const apiKey = getApiKey();
+    
+    if (!apiKey) {
+        return "Analysis unavailable: API Key not configured in the environment. If running locally, please ensure process.env.API_KEY is defined.";
+    }
+
     try {
-        const client = getGeminiClient();
+        const ai = new GoogleGenAI({ apiKey });
         
         const prompt = `
         You are a cybersecurity expert. Analyze the following SSL/TLS Certificate (PEM format).
@@ -35,17 +42,15 @@ export const analyzeCertificate = async (certPem: string): Promise<string> => {
         ${certPem}
         `;
 
-        // Using gemini-3-pro-preview for complex analysis task
-        const response = await client.models.generateContent({
+        const response = await ai.models.generateContent({
             model: 'gemini-3-pro-preview',
             contents: prompt,
         });
 
-        // Access the .text property directly (not a method)
         return response.text || "No analysis could be generated.";
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Gemini analysis failed:", error);
-        return "Failed to analyze certificate. Please ensure the API key is valid and try again.";
+        return `Failed to analyze certificate: ${error.message || 'Unknown error'}`;
     }
 };

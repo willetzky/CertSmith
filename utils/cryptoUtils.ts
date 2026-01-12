@@ -1,6 +1,5 @@
-
-import forge from 'node-forge';
-import { ParsedPFX } from '../types';
+import * as forge from 'node-forge';
+import { ParsedPFX } from '../types.ts';
 
 /**
  * Reads a File object as an ArrayBuffer
@@ -50,32 +49,26 @@ export const extractFromPFX = (
     const p12Der = forge.util.createBuffer(pfxBuffer);
     const p12Asn1 = forge.asn1.fromDer(p12Der);
     
-    // Decrypt PFX
     const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);
 
     let keyPem: string | null = null;
     let certPem: string | null = null;
     const caPems: string[] = [];
 
-    // Iterate through safe bags to find keys and certificates
     for (const safeContent of p12.safeContents) {
       for (const safeBag of safeContent.safeBags) {
-        // If it's a key bag (PKCS#8 shrouded or simple key)
         if (safeBag.type === forge.pki.oids.pkcs8ShroudedKeyBag || safeBag.type === forge.pki.oids.keyBag) {
             if (safeBag.key) {
                 if (outputKeyPassword) {
-                    // Encrypt the key with the new password (PKCS#8)
                     const encryptedKey = forge.pki.encryptPrivateKey(safeBag.key, outputKeyPassword, {
                         algorithm: 'aes256',
                     });
                     keyPem = forge.pki.encryptedPrivateKeyToPem(encryptedKey);
                 } else {
-                    // Standard unencrypted PEM
                     keyPem = forge.pki.privateKeyToPem(safeBag.key);
                 }
             }
         } 
-        // If it's a certificate bag
         else if (safeBag.type === forge.pki.oids.certBag) {
           if (safeBag.cert) {
             const pem = forge.pki.certificateToPem(safeBag.cert);
@@ -110,12 +103,10 @@ export const extractFromP7B = (p7bBuffer: ArrayBuffer): ParsedPFX => {
   const buffer = forge.util.createBuffer(p7bBuffer);
   let p7;
 
-  // Try DER first (binary P7B)
   try {
       const asn1 = forge.asn1.fromDer(buffer);
       p7 = forge.pkcs7.messageFromAsn1(asn1);
   } catch (e) {
-      // Try PEM (text P7B)
       try {
            const pemStr = buffer.toString();
            p7 = forge.pkcs7.messageFromPem(pemStr);
@@ -124,7 +115,6 @@ export const extractFromP7B = (p7bBuffer: ArrayBuffer): ParsedPFX => {
       }
   }
 
-  // forge types for pkcs7 might be incomplete, casting to any to access certificates safely
   const certs = (p7 as any).certificates || [];
   
   if (!certs || certs.length === 0) {
@@ -133,7 +123,6 @@ export const extractFromP7B = (p7bBuffer: ArrayBuffer): ParsedPFX => {
 
   const pemCerts = certs.map((c: any) => forge.pki.certificateToPem(c));
   
-  // Return structure matching PFX, but with no private key
   return {
       key: null,
       cert: pemCerts[0] || null,
@@ -150,10 +139,8 @@ export const verifyCertKeyMatch = (certPem: string, keyPem: string, password?: s
     let privateKey: any;
 
     try {
-      // Try unencrypted first
       privateKey = forge.pki.privateKeyFromPem(keyPem);
     } catch (e) {
-      // Try encrypted if password provided
       if (password) {
         privateKey = forge.pki.decryptRsaPrivateKey(keyPem, password);
       } else {
@@ -163,11 +150,7 @@ export const verifyCertKeyMatch = (certPem: string, keyPem: string, password?: s
 
     if (!privateKey) throw new Error("Could not parse private key.");
 
-    // Compare public keys
-    // For RSA, compare modulus and exponent
     const certPubKey = cert.publicKey as any;
-    
-    // Derived public key from private key
     const derivedPubKey = forge.pki.setRsaPublicKey(privateKey.n, privateKey.e);
 
     const certPubKeyPem = forge.pki.publicKeyToPem(certPubKey);
@@ -190,13 +173,9 @@ export const createPFX = (
   friendlyName?: string
 ): string => {
   try {
-    // Parse Private Key
     const privateKey = forge.pki.privateKeyFromPem(keyPem);
-    
-    // Parse Certificate
     const cert = forge.pki.certificateFromPem(certPem);
     
-    // Parse Chain (if any)
     const chain: forge.pki.Certificate[] = [];
     chain.push(cert);
 
@@ -208,14 +187,11 @@ export const createPFX = (
                 try {
                     const caCert = forge.pki.certificateFromPem(trimmed + '\n-----END CERTIFICATE-----');
                     chain.push(caCert);
-                } catch (e) {
-                    // Ignore invalid blocks/newlines
-                }
+                } catch (e) { }
             }
         }
     }
 
-    // Create PFX
     const p12Asn1 = forge.pkcs12.toPkcs12Asn1(
         privateKey,
         chain,
@@ -227,8 +203,7 @@ export const createPFX = (
         }
     );
 
-    const p12Der = forge.asn1.toDer(p12Asn1).getBytes();
-    return p12Der;
+    return forge.asn1.toDer(p12Asn1).getBytes();
     
   } catch (error) {
     throw new Error("Failed to generate PFX. Ensure your Private Key and Certificate match and are valid PEM format.");

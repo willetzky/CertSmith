@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
-import { PFXExtractor } from './components/PFXExtractor';
-import { PFXGenerator } from './components/PFXGenerator';
-import { MatchChecker } from './components/MatchChecker';
-import { CertificateAnalyzer } from './components/CertificateAnalyzer';
-import { AppMode } from './types';
+import { PFXExtractor } from './components/PFXExtractor.tsx';
+import { PFXGenerator } from './components/PFXGenerator.tsx';
+import { MatchChecker } from './components/MatchChecker.tsx';
+import { CertificateAnalyzer } from './components/CertificateAnalyzer.tsx';
+import { AppMode } from './types.ts';
 import { ShieldCheck, FileInput, FileOutput, BrainCircuit, ShieldQuestion } from 'lucide-react';
 
 const App: React.FC = () => {
