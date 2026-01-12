@@ -49,13 +49,15 @@
   <script type="importmap">
 {
   "imports": {
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "node-forge": "https://aistudiocdn.com/node-forge@^1.3.3"
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0",
+    "react-markdown": "https://esm.sh/react-markdown@9.0.1",
+    "@google/genai": "https://esm.sh/@google/genai@0.2.1",
+    "node-forge": "https://esm.sh/node-forge@1.3.1",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
   }
 }
 </script>
@@ -63,8 +65,8 @@
   <body>
     <div id="root"></div>
     
-    <!-- This script tag is essential for loading the app in a cloned repository -->
-    <script type="module" src="./index.tsx"></script>
+    <!-- Vite will automatically handle the transpilation of this .tsx file -->
+    <script type="module" src="/index.tsx"></script>
 
     <script>
       // Fallback UI for users opening the file directly (CORS/Module restriction)
@@ -72,13 +74,12 @@
         document.getElementById('root').innerHTML = `
           <div style="padding: 40px; text-align: center; font-family: 'Inter', sans-serif; color: #f87171; background: #0f172a; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
             <svg style="width: 64px; height: 64px; margin-bottom: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            <h1 style="font-size: 24px; margin-bottom: 10px; color: #fff;">Local Server Required</h1>
-            <p style="color: #94a3b8; max-width: 500px; line-height: 1.6;">Browsers block ES Modules when opened directly via <code>file://</code>. To run this app on Ubuntu 24.04, please use a local web server.</p>
+            <h1 style="font-size: 24px; margin-bottom: 10px; color: #fff;">Development Server Required</h1>
+            <p style="color: #94a3b8; max-width: 500px; line-height: 1.6;">To run this application on Ubuntu, you must use a server that supports TypeScript/JSX transpilation (like Vite).</p>
             <div style="background: #1e293b; padding: 24px; border-radius: 12px; color: #fff; margin-top: 32px; text-align: left; border: 1px solid #334155; width: 100%; max-width: 450px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);">
               <p style="margin: 0 0 12px 0; font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Run this in your Ubuntu terminal:</p>
-              <code style="font-family: monospace; color: #60a5fa; display: block; background: #020617; padding: 12px; border-radius: 6px; border: 1px solid #1e293b;">npx serve .</code>
-              <p style="margin: 15px 0 0 0; font-size: 12px; color: #475569;">Or if you have Python installed:</p>
-              <code style="font-family: monospace; color: #34d399; display: block; background: #020617; padding: 12px; border-radius: 6px; border: 1px solid #1e293b; margin-top: 5px;">python3 -m http.server</code>
+              <code style="font-family: monospace; color: #60a5fa; display: block; background: #020617; padding: 12px; border-radius: 6px; border: 1px solid #1e293b;">npx vite</code>
+              <p style="margin: 15px 0 0 0; font-size: 12px; color: #475569;">Vite will automatically serve the app at http://localhost:5173</p>
             </div>
           </div>
         `;
