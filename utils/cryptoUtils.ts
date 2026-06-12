@@ -60,10 +60,9 @@ export const extractFromPFX = (
         if (safeBag.type === forge.pki.oids.pkcs8ShroudedKeyBag || safeBag.type === forge.pki.oids.keyBag) {
             if (safeBag.key) {
                 if (outputKeyPassword) {
-                    const encryptedKey = forge.pki.encryptPrivateKey(safeBag.key, outputKeyPassword, {
+                    keyPem = forge.pki.encryptRsaPrivateKey(safeBag.key, outputKeyPassword, {
                         algorithm: 'aes256',
                     });
-                    keyPem = forge.pki.encryptedPrivateKeyToPem(encryptedKey);
                 } else {
                     keyPem = forge.pki.privateKeyToPem(safeBag.key);
                 }
